@@ -17,12 +17,14 @@ static void freeBigInt(BigInt *b) {
     b->size   = 0;
 }
 
+// Return the number of digits up to and including the most significant non-zero digit.
 static int effectiveSize(const BigInt *b) {
     int s = b->size;
     while (s > 1 && b->digits[s - 1] == 0) s--;
     return s;
 }
 
+// Build a BigInt from a decimal string
 void initializeBigInt(BigInt *b, const char *str) {
     b->size   = (int)strlen(str);
     b->digits = (int *)malloc(b->size * sizeof(int));
@@ -30,6 +32,7 @@ void initializeBigInt(BigInt *b, const char *str) {
         b->digits[i] = str[b->size - 1 - i] - '0';
 }
 
+// Build a BigInt from a random n-digit decimal number
 void randomBigInt(BigInt *b, int ndigits, unsigned int *seed) {
     char *str = (char *)malloc(ndigits + 1);
     str[0] = '1' + (rand_r(seed) % 9);
@@ -110,7 +113,7 @@ static void karatsubaCore(const BigInt *a, const BigInt *b, BigInt *result) {
         int maxSize    = a->size + b->size;
         result->digits = (int *)calloc(maxSize, sizeof(int));
         result->size   = maxSize;
-        for (int i = 0; i < a->size; i++)
+        for (int i = 0; i < a->size; i++) // when very small, just do grade-school multiply
             for (int j = 0; j < b->size; j++) {
                 int p = a->digits[i] * b->digits[j] + result->digits[i+j];
                 result->digits[i+j]   = p % 10;
@@ -171,7 +174,7 @@ void karatsubaSerial(const BigInt *a, const BigInt *b, BigInt *result) {
  * OMP_TASK_THRESHOLD: below this digit count we stop creating new tasks and
  * fall back to serial, avoiding task-spawn overhead on tiny sub-problems.
  * =========================================================================== */
-#define OMP_TASK_THRESHOLD 500
+#define OMP_TASK_THRESHOLD 500 // below this, run serially --- no more task overhead
 
 static void karatsubaParallelInner(const BigInt *a, const BigInt *b,
                                    BigInt *result) {
@@ -192,6 +195,7 @@ static void karatsubaParallelInner(const BigInt *a, const BigInt *b,
     memcpy(aPad.digits, a->digits, na * sizeof(int));
     memcpy(bPad.digits, b->digits, nb * sizeof(int));
 
+    // Split inputs into high and low halves
     BigInt a1, a0, b1, b0;
     splitBigInt(&aPad, &a1, &a0, half);
     splitBigInt(&bPad, &b1, &b0, half);
@@ -220,6 +224,8 @@ static void karatsubaParallelInner(const BigInt *a, const BigInt *b,
 
     /* Spawn z2 = a1*b1 and z0 = a0*b0 as independent parallel tasks.
      * Each task owns its copies and frees them on completion. */
+    // Note: we could also spawn the z1 task here, but it has more overhead
+    // than the other two and is on the critical path, so we compute it in the main thread instead.
     #pragma omp task shared(z2) firstprivate(a1c, b1c)
     {
         karatsubaParallelInner(&a1c, &b1c, &z2);
