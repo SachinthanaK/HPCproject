@@ -131,7 +131,7 @@ void multiplyBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
  * inputs, and is exactly what production big-integer libraries do.
  * Tune KARATSUBA_THRESHOLD to find the crossover point on your CPU.
  * --------------------------------------------------------------------------- */
-#define KARATSUBA_THRESHOLD 32
+#define KARATSUBA_THRESHOLD 32  // below this, grade-school is faster than Karatsuba
 
 void karatsubaMultiply(const BigInt *a, const BigInt *b, BigInt *result) {
     int na = effectiveSize(a);
