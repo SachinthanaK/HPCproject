@@ -3,9 +3,7 @@
 #include <string.h>
 #include <mpi.h>
 
-/* ---------------------------------------------------------------------------
- * BigInt: LITTLE-ENDIAN (digits[0] = least-significant)
- * --------------------------------------------------------------------------- */
+/* BigInt: Little-Endian  */
 typedef struct { int *digits; int size; } BigInt;
 
 static void freeBigInt(BigInt *b) {
@@ -51,9 +49,7 @@ static void printBigIntShort(const BigInt *b) {
     printf("\n");
 }
 
-/* ===========================================================================
- * Arithmetic primitives
- * =========================================================================== */
+/* Arithmetic primitives */
 static void addBigInts(const BigInt *a, const BigInt *b, BigInt *r) {
     int mx = a->size > b->size ? a->size : b->size;
     r->digits = (int *)calloc(mx+1, sizeof(int));
@@ -97,9 +93,7 @@ static void splitBigInt(const BigInt *b, BigInt *hi, BigInt *lo, int half) {
     }
 }
 
-/* ===========================================================================
- * Serial Karatsuba (leaf computation within each rank)
- * =========================================================================== */
+/*  Serial Karatsuba  */
 #define KARATSUBA_THRESHOLD 32
 
 static void karatsubaSerial(const BigInt *a, const BigInt *b, BigInt *result) {
@@ -151,9 +145,7 @@ static void karatsubaSerial(const BigInt *a, const BigInt *b, BigInt *result) {
     *result = sum2;
 }
 
-/* ===========================================================================
- * MPI helpers
- * =========================================================================== */
+/*  MPI helpers */
 static void mpiSendBigInt(const BigInt *b, int dst, int tag, MPI_Comm comm) {
     MPI_Send(&b->size,  1,       MPI_INT, dst, tag,   comm);
     MPI_Send(b->digits, b->size, MPI_INT, dst, tag+1, comm);
@@ -163,8 +155,7 @@ static void mpiRecvBigInt(BigInt *b, int src, int tag, MPI_Comm comm) {
     b->digits = (int *)malloc(b->size * sizeof(int));
     MPI_Recv(b->digits, b->size, MPI_INT, src, tag+1, comm, MPI_STATUS_IGNORE);
 }
-/* Broadcast from group leader (rank 0 in comm) to all members.
-   Non-leaders enter with {NULL,0}; this function allocates and fills them. */
+
 static void mpiBcastBigInt(BigInt *b, MPI_Comm comm) {
     int myrank; MPI_Comm_rank(comm, &myrank);
     MPI_Bcast(&b->size, 1, MPI_INT, 0, comm);
@@ -172,27 +163,17 @@ static void mpiBcastBigInt(BigInt *b, MPI_Comm comm) {
     MPI_Bcast(b->digits, b->size, MPI_INT, 0, comm);
 }
 
-/* ===========================================================================
- * MPI_SERIAL_THRESHOLD
- * =========================================================================== */
+/* MPI_SERIAL_THRESHOLD*/
 #define MPI_SERIAL_THRESHOLD 500
 
-/* ===========================================================================
- * karatsubaMPI  — collective: every rank in `comm` must call this.
- *
- * `a`, `b`   : valid only on rank 0 of `comm`; others pass {NULL,0}.
- * `result`   : written only on rank 0 of `comm` on return.
- *
- * The function NEVER frees or modifies the caller's `a` / `b`.
- * It works entirely on internal copies.
- * =========================================================================== */
+
 static void karatsubaMPI(const BigInt *a, const BigInt *b,
                           BigInt *result, MPI_Comm comm) {
     int nproc, myrank;
     MPI_Comm_size(comm, &nproc);
     MPI_Comm_rank(comm, &myrank);
 
-    /* Make local copies — caller's buffers are never touched */
+    /* Make local copies  */
     BigInt la = {NULL,0}, lb = {NULL,0};
     if (myrank == 0) { la = cloneBigInt(a); lb = cloneBigInt(b); }
 
@@ -204,14 +185,14 @@ static void karatsubaMPI(const BigInt *a, const BigInt *b,
     int nb = effectiveSize(&lb);
     int n  = na > nb ? na : nb;
 
-    /* Leaf: single rank or small input → serial, no more communication */
+    /* small input size → serial karatsuba function instead of MPI  */
     if (nproc < 3 || n <= MPI_SERIAL_THRESHOLD) {
         if (myrank == 0) karatsubaSerial(&la, &lb, result);
         freeBigInt(&la); freeBigInt(&lb);
         return;
     }
 
-    /* Split */
+    /* Split big integers into 2 halves */
     int half = n / 2;
     BigInt aPad = {(int*)calloc(n,sizeof(int)),n};
     BigInt bPad = {(int*)calloc(n,sizeof(int)),n};
@@ -227,7 +208,7 @@ static void karatsubaMPI(const BigInt *a, const BigInt *b,
     addBigInts(&a1,&a0,&a1a0);
     addBigInts(&b1,&b0,&b1b0);
 
-    /* Partition ranks into three groups */
+    /* divide mpi processes into 3 groups */
     int base  = nproc / 3, extra = nproc % 3;
     int s0    = base + (extra > 0 ? 1 : 0);
     int s1    = base + (extra > 1 ? 1 : 0);
@@ -303,9 +284,7 @@ static void karatsubaMPI(const BigInt *a, const BigInt *b,
     freeBigInt(&recv_a);freeBigInt(&recv_b);
 }
 
-/* ===========================================================================
- * Correctness helper
- * =========================================================================== */
+/* Correctness helper */
 static int bigIntsEqual(const BigInt *a, const BigInt *b) {
     int na = effectiveSize(a), nb = effectiveSize(b);
     if (na != nb) return 0;
@@ -314,28 +293,24 @@ static int bigIntsEqual(const BigInt *a, const BigInt *b) {
     return 1;
 }
 
-/* ===========================================================================
- * main
- * =========================================================================== */
+/*main */
 int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
     int world_rank, world_size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);   //get process id(rank)
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);  // gets number of processes
 
     if (world_rank == 0) {
-        printf("=================================================================\n");
         printf("  Karatsuba Big-Integer Multiplication — MPI Version\n");
         printf("  MPI ranks        : %d\n", world_size);
         printf("  Serial threshold : %d digits  (switch to schoolbook)\n",
                KARATSUBA_THRESHOLD);
         printf("  MPI threshold    : %d digits  (stop spawning sub-comms)\n",
                MPI_SERIAL_THRESHOLD);
-        printf("=================================================================\n\n");
     }
 
-    /* --- Sample ------------------------------------------------------------ */
-    if (world_rank == 0) printf("--- Sample: 123456789 x 987654321 ---\n");
+    /*  Sample  */
+    if (world_rank == 0) printf(" Sample: 123456789 x 987654321 \n");
     {
         BigInt sa={NULL,0}, sb={NULL,0};
         if (world_rank==0) { initializeBigInt(&sa,"123456789");
@@ -348,15 +323,15 @@ int main(int argc, char *argv[]) {
             karatsubaSerial(&sa,&sb,&sser);
             printf("  Serial ref  : "); printBigIntShort(&sser);
             printf("  Match       : %s\n\n",
-                   bigIntsEqual(&smpi,&sser)?"YES ✓":"NO ✗");
+                   bigIntsEqual(&smpi,&sser)?"YES ":"NO ");
             freeBigInt(&sser); freeBigInt(&smpi);
             freeBigInt(&sa);   freeBigInt(&sb);
         }
     }
 
-    /* --- Correctness ------------------------------------------------------- */
+    /* Correctness  */
     if (world_rank==0)
-        printf("--- Correctness (10 random pairs, varying sizes) ---\n");
+        printf(" Correctness (10 random pairs, varying sizes) \n");
     int check_sizes[] = {7,9,50,100,500,1000,5000,10000,50000,100000};
     int allOk = 1;
     for (int t = 0; t < 10; t++) {
@@ -372,17 +347,17 @@ int main(int argc, char *argv[]) {
             int ok = bigIntsEqual(&cmpi,&cser);
             if (!ok) allOk=0;
             printf("  %6d digits: Serial==MPI: %s\n",
-                   check_sizes[t], ok?"PASS ✓":"FAIL ✗");
+                   check_sizes[t], ok?"PASS ":"FAIL ");
             freeBigInt(&cser); freeBigInt(&cmpi);
             freeBigInt(&ca);   freeBigInt(&cb);
         }
     }
     if (world_rank==0)
-        printf("  Overall: %s\n\n", allOk?"ALL PASSED ✓":"SOME FAILED ✗");
+        printf("  Overall: %s\n\n", allOk?"ALL PASSED ":"SOME FAILED ");
 
-    /* --- Benchmark --------------------------------------------------------- */
+    /* Benchmark  */
     if (world_rank==0) {
-        printf("--- Benchmark (wall-clock time per single multiplication) ---\n\n");
+        printf(" Benchmark  \n\n");
         printf("  %-10s  %-6s  %-14s  %-14s  %-10s\n",
                "Digits","Reps","Serial (s)","MPI (s)","Speedup");
         printf("  %-10s  %-6s  %-14s  %-14s  %-10s\n",
@@ -412,7 +387,7 @@ int main(int argc, char *argv[]) {
         unsigned int s = 77777 + nd;
         if (world_rank==0) { randomBigInt(&ba,nd,&s); randomBigInt(&bb,nd,&s); }
 
-        /* Serial timing: rank 0 only, BEFORE MPI benchmark loop */
+        /* Serial execution time measurement */
         double ser_time = 0.0;
         if (world_rank==0) {
             BigInt bres={NULL,0};
@@ -426,12 +401,11 @@ int main(int argc, char *argv[]) {
             if (bres.digits) freeBigInt(&bres);
         }
 
-        /* MPI warm-up */
         { BigInt bres={NULL,0};
           karatsubaMPI(&ba,&bb,&bres,MPI_COMM_WORLD);
           if (world_rank==0 && bres.digits) freeBigInt(&bres); }
 
-        /* MPI timed loop */
+        /* MPI execution time measurement */
         MPI_Barrier(MPI_COMM_WORLD);
         double t0 = MPI_Wtime();
         for (int r=0; r<reps; r++) {
