@@ -26,7 +26,7 @@ void initializeBigInt(BigInt *b, const char *str) {
     b->size   = (int)strlen(str);
     b->digits = (int *)malloc(b->size * sizeof(int));
     for (int i = 0; i < b->size; i++)
-        b->digits[i] = str[b->size - 1 - i] - '0';
+        b->digits[i] = str[b->size - 1 - i] - '0';     //check the speedup measurement
 }
 void randomBigInt(BigInt *b, int ndigits, unsigned int *seed) {
     char *str = (char *)malloc(ndigits + 1);
@@ -426,7 +426,6 @@ int main(int argc, char *argv[]) {
     if (world_rank==0) {
         printf("\n  Speedup > 1.0x  -> MPI is faster than serial.\n");
         printf("  Speedup < 1.0x  -> communication overhead dominates (small inputs).\n");
-        printf("  (More ranks = higher speedup at large digit counts)\n");
     }
 
     MPI_Finalize();
