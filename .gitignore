@@ -1,0 +1,15 @@
+
+
+# Object files and other binaries
+*.o
+*.exe
+*.out
+
+# Benchmark Log Files
+log/*.log
+*.log
+
+# VS Code Intellisense
+.vscode/ipch/
+.vscode/.browse.vc.db
+.vscode/*.log

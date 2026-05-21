@@ -20,14 +20,18 @@ static void freeBigInt(BigInt *b) {
 
 static int effectiveSize(const BigInt *b) {
     int s = b->size;
-    while (s > 1 && b->digits[s - 1] == 0) s--;
-    return s;
+    while (s > 0 && b->digits[s - 1] == 0) s--;
+    return s == 0 ? 1 : s;
 }
 
 /* Build a BigInt from a decimal string */
 void initializeBigInt(BigInt *b, const char *str) {
     b->size   = (int)strlen(str);
     b->digits = (int *)malloc(b->size * sizeof(int));
+    if (!b->digits) {
+        fprintf(stderr, "Fatal: malloc failed in initializeBigInt\n");
+        exit(1);
+    }
     for (int i = 0; i < b->size; i++)
         b->digits[i] = str[b->size - 1 - i] - '0';
 }
@@ -35,6 +39,10 @@ void initializeBigInt(BigInt *b, const char *str) {
 /* Build a BigInt from a random n-digit decimal number */
 void randomBigInt(BigInt *b, int ndigits, unsigned int *seed) {
     char *str = (char *)malloc(ndigits + 1);
+    if (!str) {
+        fprintf(stderr, "Fatal: malloc failed in randomBigInt\n");
+        exit(1);
+    }
     str[0] = '1' + (rand_r(seed) % 9);   /* no leading zero */
     for (int i = 1; i < ndigits; i++)
         str[i] = '0' + (rand_r(seed) % 10);
@@ -63,6 +71,10 @@ void printBigIntShort(const BigInt *b, int maxDigits) {
 static void addBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
     int maxSize = a->size > b->size ? a->size : b->size;
     result->digits = (int *)calloc(maxSize + 1, sizeof(int));
+    if (!result->digits) {
+        fprintf(stderr, "Fatal: calloc failed in addBigInts\n");
+        exit(1);
+    }
     result->size   = maxSize + 1;
     int carry = 0;
     for (int i = 0; i < maxSize || carry; i++) {
@@ -76,6 +88,10 @@ static void addBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
 
 static void subtractBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
     result->digits = (int *)calloc(a->size, sizeof(int));
+    if (!result->digits) {
+        fprintf(stderr, "Fatal: calloc failed in subtractBigInts\n");
+        exit(1);
+    }
     result->size   = a->size;
     int borrow = 0;
     for (int i = 0; i < a->size; i++) {
@@ -89,6 +105,10 @@ static void shiftLeft(BigInt *b, int shift) {
     if (shift == 0) return;
     int newSize    = b->size + shift;
     int *newDigits = (int *)calloc(newSize, sizeof(int));
+    if (!newDigits) {
+        fprintf(stderr, "Fatal: calloc failed in shiftLeft\n");
+        exit(1);
+    }
     memcpy(newDigits + shift, b->digits, b->size * sizeof(int));
     free(b->digits);
     b->digits = newDigits;
@@ -98,14 +118,26 @@ static void shiftLeft(BigInt *b, int shift) {
 static void splitBigInt(const BigInt *b, BigInt *high, BigInt *low, int half) {
     low->size   = half;
     low->digits = (int *)malloc(half * sizeof(int));
+    if (!low->digits && half > 0) {
+        fprintf(stderr, "Fatal: malloc failed in splitBigInt (low)\n");
+        exit(1);
+    }
     memcpy(low->digits, b->digits, half * sizeof(int));
 
     high->size = b->size - half;
     if (high->size <= 0) {
         high->size   = 1;
         high->digits = (int *)calloc(1, sizeof(int));
+        if (!high->digits) {
+            fprintf(stderr, "Fatal: calloc failed in splitBigInt (high zero)\n");
+            exit(1);
+        }
     } else {
         high->digits = (int *)malloc(high->size * sizeof(int));
+        if (!high->digits) {
+            fprintf(stderr, "Fatal: malloc failed in splitBigInt (high)\n");
+            exit(1);
+        }
         memcpy(high->digits, b->digits + half, high->size * sizeof(int));
     }
 }
@@ -114,6 +146,10 @@ static void splitBigInt(const BigInt *b, BigInt *high, BigInt *low, int half) {
 void multiplyBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
     int maxSize    = a->size + b->size;
     result->digits = (int *)calloc(maxSize, sizeof(int));
+    if (!result->digits) {
+        fprintf(stderr, "Fatal: calloc failed in multiplyBigInts\n");
+        exit(1);
+    }
     result->size   = maxSize;
     for (int i = 0; i < a->size; i++) {
         for (int j = 0; j < b->size; j++) {
@@ -149,6 +185,10 @@ void karatsubaMultiply(const BigInt *a, const BigInt *b, BigInt *result) {
     /* Pad both operands to exactly n digits */
     BigInt aPad = { (int *)calloc(n, sizeof(int)), n };
     BigInt bPad = { (int *)calloc(n, sizeof(int)), n };
+    if (!aPad.digits || !bPad.digits) {
+        fprintf(stderr, "Fatal: calloc failed in karatsubaMultiply (pads)\n");
+        exit(1);
+    }
     memcpy(aPad.digits, a->digits, na * sizeof(int));
     memcpy(bPad.digits, b->digits, nb * sizeof(int));
 
@@ -285,10 +325,9 @@ int main(void) {
         {     100,    1000,    1000, 0 },
         {     500,      50,     100, 0 },
         {    1000,      10,      50, 0 },
-        {    5000,       1,      10, 0 },   /* GS too slow — skip */
-        {   10000,       1,       5, 0 },   /* GS too slow — skip */
-        {  100000,       1,       3, 0 },
-        { 1000000,       1,       1, 0 },
+        {    5000,       1,      10, 1 },   /* GS too slow — skip */
+        {   10000,       1,       5, 1 },   /* GS too slow — skip */
+        {  100000,       1,       3, 1 },   /* GS too slow — skip */
     };
 
     for (int i = 0; i < (int)(sizeof cases / sizeof cases[0]); i++) {

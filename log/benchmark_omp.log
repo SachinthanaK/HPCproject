@@ -1,0 +1,42 @@
+=================================================================
+  Karatsuba: Serial vs OpenMP Parallel
+  Threads          : 8
+  Base threshold   : 32 digits  (switch to schoolbook)
+  Task threshold   : 500 digits  (stop spawning OMP tasks)
+=================================================================
+
+--- Correctness (10 random pairs, varying sizes) ---
+       7 digits: Serial==Parallel: PASS ✓
+       9 digits: Serial==Parallel: PASS ✓
+      50 digits: Serial==Parallel: PASS ✓
+     100 digits: Serial==Parallel: PASS ✓
+     500 digits: Serial==Parallel: PASS ✓
+    1000 digits: Serial==Parallel: PASS ✓
+    5000 digits: Serial==Parallel: PASS ✓
+   10000 digits: Serial==Parallel: PASS ✓
+   50000 digits: Serial==Parallel: PASS ✓
+  100000 digits: Serial==Parallel: PASS ✓
+  Overall: ALL PASSED ✓
+
+--- Sample output (123456789 x 987654321) ---
+  Serial  : 121932631112635269
+  Parallel: 121932631112635269
+  Match   : YES ✓
+
+--- Benchmark (wall-clock time per single multiplication) ---
+
+  Digits      Reps    Serial (s)      Parallel (s)    Speedup   
+  ----------  ------  --------------  --------------  ----------
+  9           100000  0.000000        0.000002        0.11x
+  50          50000   0.000007        0.000013        0.54x
+  100         10000   0.000024        0.000092        0.26x
+  500         2000    0.000459        0.000362        1.27x
+  1000        500     0.001198        0.001344        0.89x
+  5000        20      0.016847        0.005112        3.30x
+  10000       10      0.051145        0.016144        3.17x
+  50000       5       0.725683        0.194382        3.73x
+  100000      3       2.174379        0.659727        3.30x
+
+  Speedup > 1.0x means OpenMP is faster than serial.
+  Speedup < 1.0x means task overhead outweighs parallelism gain.
+  (More threads = higher speedup at large digit counts)
