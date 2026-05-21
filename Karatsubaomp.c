@@ -3,9 +3,7 @@
 #include <string.h>
 #include <omp.h>
 
-/* ===========================================================================
- * BigInt: LITTLE-ENDIAN (digits[0] = least significant digit)
- * =========================================================================== */
+// BigInt structure: represents a large integer as an array of digits (least significant digit first)
 typedef struct {
     int *digits;
     int  size;
@@ -42,10 +40,6 @@ void randomBigInt(BigInt *b, int ndigits, unsigned int *seed) {
     initializeBigInt(b, str);
     free(str);
 }
-
-/* ===========================================================================
- * Arithmetic primitives
- * =========================================================================== */
 
 static void addBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
     int maxSize = a->size > b->size ? a->size : b->size;
@@ -97,10 +91,6 @@ static void splitBigInt(const BigInt *b, BigInt *high, BigInt *low, int half) {
     }
 }
 
-/* ===========================================================================
- * SERIAL Karatsuba
- * Base case falls back to single-digit multiply below THRESHOLD.
- * =========================================================================== */
 #define KARATSUBA_THRESHOLD 32
 
 static void karatsubaCore(const BigInt *a, const BigInt *b, BigInt *result) {
@@ -165,19 +155,12 @@ void karatsubaSerial(const BigInt *a, const BigInt *b, BigInt *result) {
     karatsubaCore(a, b, result);
 }
 
-/* ===========================================================================
- * PARALLEL Karatsuba with OpenMP tasks
- *
- * The three recursive calls  z2 = a1*b1,  z0 = a0*b0,  z1 = (a1+a0)*(b1+b0)
- * are completely independent --- perfect for task parallelism.
- *
- * OMP_TASK_THRESHOLD: below this digit count we stop creating new tasks and
- * fall back to serial, avoiding task-spawn overhead on tiny sub-problems.
- * =========================================================================== */
+/* PARALLEL Karatsuba with OpenMP tasks*/
+
 #define OMP_TASK_THRESHOLD 500 // below this, run serially --- no more task overhead
 
-static void karatsubaParallelInner(const BigInt *a, const BigInt *b,
-                                   BigInt *result) {
+static void karatsubaParallelInner(const BigInt *a, const BigInt *b,BigInt *result) {
+
     int na = effectiveSize(a);
     int nb = effectiveSize(b);
     int n  = na > nb ? na : nb;
@@ -209,10 +192,7 @@ static void karatsubaParallelInner(const BigInt *a, const BigInt *b,
 
     BigInt z2, z0, z1prod;
 
-    /* Deep-copy inputs for tasks: firstprivate only copies the struct shell
-     * (pointer + size), NOT the heap array behind it.  If the spawning thread
-     * frees a0/a1/b0/b1 before a task reads them we get use-after-free.
-     * Giving each task its own heap copy avoids the race entirely. */
+// Make copies of a1, b1, a0, b0 for the tasks since they will be freed in the tasks
     BigInt a1c = { (int *)malloc(a1.size * sizeof(int)), a1.size };
     BigInt b1c = { (int *)malloc(b1.size * sizeof(int)), b1.size };
     BigInt a0c = { (int *)malloc(a0.size * sizeof(int)), a0.size };
@@ -222,11 +202,8 @@ static void karatsubaParallelInner(const BigInt *a, const BigInt *b,
     memcpy(a0c.digits, a0.digits, a0.size * sizeof(int));
     memcpy(b0c.digits, b0.digits, b0.size * sizeof(int));
 
-    /* Spawn z2 = a1*b1 and z0 = a0*b0 as independent parallel tasks.
-     * Each task owns its copies and frees them on completion. */
-    // Note: we could also spawn the z1 task here, but it has more overhead
-    // than the other two and is on the critical path, so we compute it in the main thread instead.
-    #pragma omp task shared(z2) firstprivate(a1c, b1c)
+    /* Spawn z2 = a1*b1 and z0 = a0*b0 as independent parallel tasks */
+     #pragma omp task shared(z2) firstprivate(a1c, b1c)
     {
         karatsubaParallelInner(&a1c, &b1c, &z2);
         freeBigInt(&a1c);
@@ -268,9 +245,7 @@ void karatsubaParallel(const BigInt *a, const BigInt *b, BigInt *result) {
     karatsubaParallelInner(a, b, result);
 }
 
-/* ===========================================================================
- * Correctness check
- * =========================================================================== */
+/* Correctness check */
 static int bigIntsEqual(const BigInt *a, const BigInt *b) {
     int na = effectiveSize(a), nb = effectiveSize(b);
     if (na != nb) return 0;
@@ -291,9 +266,6 @@ static void printBigIntShort(const BigInt *b) {
     printf("\n");
 }
 
-/* ===========================================================================
- * main
- * =========================================================================== */
 int main(void) {
     printf("=================================================================\n");
     printf("  Karatsuba: Serial vs OpenMP Parallel\n");
@@ -304,9 +276,7 @@ int main(void) {
            OMP_TASK_THRESHOLD);
     printf("=================================================================\n\n");
 
-    /* -----------------------------------------------------------------------
-     * Correctness: serial result must equal parallel result
-     * --------------------------------------------------------------------- */
+    /* Correctness: serial result must equal parallel result*/
     printf("--- Correctness (10 random pairs, varying sizes) ---\n");
     unsigned int seed = 42;
     int allOk = 1;
@@ -326,9 +296,7 @@ int main(void) {
     }
     printf("  Overall: %s\n\n", allOk ? "ALL PASSED ✓" : "SOME FAILED ✗");
 
-    /* -----------------------------------------------------------------------
-     * Sample output (just to show numbers look right)
-     * --------------------------------------------------------------------- */
+    // Sample output: show the product of two 9-digit numbers
     printf("--- Sample output (123456789 x 987654321) ---\n");
     BigInt sa, sb, sser, spar;
     initializeBigInt(&sa, "123456789");
@@ -341,9 +309,6 @@ int main(void) {
     freeBigInt(&sa); freeBigInt(&sb);
     freeBigInt(&sser); freeBigInt(&spar);
 
-    /* -----------------------------------------------------------------------
-     * Benchmark
-     * --------------------------------------------------------------------- */
     printf("--- Benchmark (wall-clock time per single multiplication) ---\n\n");
     printf("  %-10s  %-6s  %-14s  %-14s  %-10s\n",
            "Digits", "Reps", "Serial (s)", "Parallel (s)", "Speedup");
