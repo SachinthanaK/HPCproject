@@ -374,8 +374,6 @@ int main(int argc, char *argv[]) {
         {   10000,    10 },
         {   50000,     5 },
         {  100000,     3 },
-        {  500000,     1 },
-        { 1000000,     1 },
     };
 
     for (int i = 0; i < (int)(sizeof cases / sizeof cases[0]); i++) {

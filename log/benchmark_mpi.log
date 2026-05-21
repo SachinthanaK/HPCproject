@@ -1,0 +1,39 @@
+  Karatsuba Big-Integer Multiplication — MPI Version
+  MPI ranks        : 3
+  Serial threshold : 32 digits  (switch to schoolbook)
+  MPI threshold    : 500 digits  (stop spawning sub-comms)
+ Sample: 123456789 x 987654321 
+  MPI result  : 121932631112635269
+  Serial ref  : 121932631112635269
+  Match       : YES 
+
+ Correctness (10 random pairs, varying sizes) 
+       7 digits: Serial==MPI: PASS 
+       9 digits: Serial==MPI: PASS 
+      50 digits: Serial==MPI: PASS 
+     100 digits: Serial==MPI: PASS 
+     500 digits: Serial==MPI: PASS 
+    1000 digits: Serial==MPI: PASS 
+    5000 digits: Serial==MPI: PASS 
+   10000 digits: Serial==MPI: PASS 
+   50000 digits: Serial==MPI: PASS 
+  100000 digits: Serial==MPI: PASS 
+  Overall: ALL PASSED 
+
+ Benchmark  
+
+  Digits      Reps    Serial (s)      MPI (s)         Speedup   
+  ----------  ------  --------------  --------------  ----------
+  9           10000   0.000000        0.000001        0.27x
+  50          5000    0.000012        0.000013        0.93x
+  100         2000    0.000039        0.000048        0.83x
+  500         500     0.000767        0.000738        1.04x
+  1000        200     0.002184        0.001026        2.13x
+  5000        20      0.044810        0.011832        3.79x
+  10000       10      0.079110        0.027538        2.87x
+  50000       5       1.003628        0.324818        3.09x
+  100000      3       3.215711        1.168103        2.75x
+
+  Speedup > 1.0x  -> MPI is faster than serial.
+  Speedup < 1.0x  -> communication overhead dominates (small inputs).
+  (More ranks = higher speedup at large digit counts)

@@ -1,0 +1,26 @@
+============================================================
+  Big-Integer Multiplication Benchmark
+  Karatsuba threshold: 32 digits
+============================================================
+
+--- Correctness check (9-digit numbers, 5 random pairs) ---
+  Test 1: PASS ✓
+  Test 2: PASS ✓
+  Test 3: PASS ✓
+  Test 4: PASS ✓
+  Test 5: PASS ✓
+  All correctness tests: PASSED ✓
+
+Digits        Reps      GradeSchool(s)  Karatsuba(s)    Speedup     Correct
+------------  --------  --------------  --------------  ----------  -------
+9             100000    0.000000        0.000000        1.01      x  YES ✓
+50            10000     0.000007        0.000006        1.02      x  YES ✓
+100           1000      0.000026        0.000020        1.30      x  YES ✓
+500           50        0.000653        0.000342        1.91      x  YES ✓
+1000          10        0.002836        0.001119        2.54      x  YES ✓
+5000          10        skipped         0.016685        N/A         N/A (GS skipped)
+10000         5         skipped         0.048586        N/A         N/A (GS skipped)
+100000        3         skipped         1.846435        N/A         N/A (GS skipped)
+
+Note: times are per single multiplication.
+Negative speedup (<1x) means Karatsuba is slower (small-number overhead).
