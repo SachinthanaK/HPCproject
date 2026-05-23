@@ -28,8 +28,10 @@ mpirun --allow-run-as-root -np 3 ./distributed_memory/Karatsubampi > log/benchma
 echo "  ✓ MPI benchmark finished."
 
 echo "Running Hybrid (MPI+OpenMP) benchmark..."
-# We run 3 MPI processes, each with 2 OpenMP threads (total 6 cores)
-export OMP_NUM_THREADS=2
+# 3 MPI ranks x 4 OpenMP threads each. Each rank handles one of the 3 Karatsuba
+# sub-problems (z2 / z0 / prod) and spawns OMP tasks internally for the deeper
+# recursive splits. 4 threads/rank can actually run the 3-way split + spare.
+export OMP_NUM_THREADS=4
 mpirun --allow-run-as-root -np 3 ./hybrid/hybrid_karatsuba_mpi_omp 9 100000 geometric > log/benchmark_hybrid.log 2>&1
 echo "  ✓ Hybrid benchmark finished."
 

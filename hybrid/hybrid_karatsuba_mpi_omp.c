@@ -10,7 +10,7 @@ typedef struct {
 } BigInt;
 
 #define KARATSUBA_THRESHOLD   32
-#define OMP_TASK_THRESHOLD   256
+#define OMP_TASK_THRESHOLD   500
 #define OMP_MAX_DEPTH          4
 #define MPI_THRESHOLD        512
 
@@ -360,93 +360,79 @@ static void hybridKaratsubaMPIOMP(const BigInt *a, const BigInt *b, BigInt *resu
         return;
     }
 
-    BigInt A = {NULL, 0}, B = {NULL, 0};
-    if (rank == 0) {
-        copyBigInt(a, &A);
-        copyBigInt(b, &B);
+    int rank_z0 = -1, rank_prod = -1;
+    for (int r = 1; r < world; r++) {
+        if (rank_z0   == -1 && r % 3 == 1) rank_z0   = r;
+        if (rank_prod == -1 && r % 3 == 2) rank_prod = r;
     }
-
-    mpiBroadcastBigInt(&A, 0, comm);
-    mpiBroadcastBigInt(&B, 0, comm);
+    if (rank_z0 == -1 || rank_prod == -1)
+        die("Need at least 3 ranks for hybrid Karatsuba");
 
     int half = n / 2;
-
-    BigInt aPad, bPad;
-    padToSize(&A, n, &aPad);
-    padToSize(&B, n, &bPad);
-
-    freeBigInt(&A);
-    freeBigInt(&B);
-
-    BigInt a1, a0, b1, b0;
-    splitBigInt(&aPad, &a1, &a0, half);
-    splitBigInt(&bPad, &b1, &b0, half);
-
-    freeBigInt(&aPad);
-    freeBigInt(&bPad);
-
-    int role = rank % 3;
     BigInt local = {NULL, 0};
 
-    if (role == 0) {
-        karatsubaOMP(&a1, &b1, &local);
-    } else if (role == 1) {
-        karatsubaOMP(&a0, &b0, &local);
-    } else {
+    if (rank == 0) {
+        BigInt aPad, bPad;
+        padToSize(a, n, &aPad);
+        padToSize(b, n, &bPad);
+
+        BigInt a1, a0, b1, b0;
+        splitBigInt(&aPad, &a1, &a0, half);
+        splitBigInt(&bPad, &b1, &b0, half);
+        freeBigInt(&aPad);
+        freeBigInt(&bPad);
+
         BigInt s1 = {NULL, 0}, s2 = {NULL, 0};
         addBigInts(&a1, &a0, &s1);
         addBigInts(&b1, &b0, &s2);
-        karatsubaOMP(&s1, &s2, &local);
-        freeBigInt(&s1);
-        freeBigInt(&s2);
-    }
 
-    freeBigInt(&a1); freeBigInt(&a0);
-    freeBigInt(&b1); freeBigInt(&b0);
+        mpiSendBigInt(&a0, rank_z0,   10, comm);
+        mpiSendBigInt(&b0, rank_z0,   12, comm);
+        mpiSendBigInt(&s1, rank_prod, 14, comm);
+        mpiSendBigInt(&s2, rank_prod, 16, comm);
 
-    if (rank == 0) {
+        freeBigInt(&a0); freeBigInt(&b0);
+        freeBigInt(&s1); freeBigInt(&s2);
+
+        karatsubaOMP(&a1, &b1, &local);
+        freeBigInt(&a1); freeBigInt(&b1);
+
         BigInt z2 = local, z0 = {NULL, 0}, prod = {NULL, 0};
-
-        int src_z0 = -1, src_prod = -1;
-        for (int r = 1; r < world; r++) {
-            if (src_z0 == -1 && r % 3 == 1) src_z0 = r;
-            if (src_prod == -1 && r % 3 == 2) src_prod = r;
-        }
-
-        if (src_z0 == -1 || src_prod == -1)
-            die("Need at least one process for z0 and prod roles");
-
-        mpiRecvBigInt(&z0, src_z0, 100, comm);
-        mpiRecvBigInt(&prod, src_prod, 200, comm);
+        mpiRecvBigInt(&z0,   rank_z0,   100, comm);
+        mpiRecvBigInt(&prod, rank_prod, 200, comm);
 
         BigInt tmp = {NULL, 0}, z1 = {NULL, 0}, sum1 = {NULL, 0}, sum2 = {NULL, 0};
-
         subtractBigInts(&prod, &z2, &tmp);
-        subtractBigInts(&tmp, &z0, &z1);
-
+        subtractBigInts(&tmp,  &z0, &z1);
         freeBigInt(&prod);
         freeBigInt(&tmp);
 
         shiftLeft(&z2, 2 * half);
         shiftLeft(&z1, half);
 
-        addBigInts(&z2, &z1, &sum1);
+        addBigInts(&z2,   &z1, &sum1);
         addBigInts(&sum1, &z0, &sum2);
 
-        freeBigInt(&z2);
-        freeBigInt(&z1);
-        freeBigInt(&z0);
-        freeBigInt(&sum1);
-
+        freeBigInt(&z2); freeBigInt(&z1); freeBigInt(&z0); freeBigInt(&sum1);
         *result = sum2;
-    } else {
-        if (role == 1) {
-            mpiSendBigInt(&local, 0, 100, comm);
-        } else if (role == 2) {
-            mpiSendBigInt(&local, 0, 200, comm);
-        }
+    } else if (rank == rank_z0) {
+        BigInt a0 = {NULL, 0}, b0 = {NULL, 0};
+        mpiRecvBigInt(&a0, 0, 10, comm);
+        mpiRecvBigInt(&b0, 0, 12, comm);
+        karatsubaOMP(&a0, &b0, &local);
+        freeBigInt(&a0); freeBigInt(&b0);
+        mpiSendBigInt(&local, 0, 100, comm);
+        freeBigInt(&local);
+    } else if (rank == rank_prod) {
+        BigInt s1 = {NULL, 0}, s2 = {NULL, 0};
+        mpiRecvBigInt(&s1, 0, 14, comm);
+        mpiRecvBigInt(&s2, 0, 16, comm);
+        karatsubaOMP(&s1, &s2, &local);
+        freeBigInt(&s1); freeBigInt(&s2);
+        mpiSendBigInt(&local, 0, 200, comm);
         freeBigInt(&local);
     }
+    /* Idle ranks (world > 3 not assigned a role) return immediately. */
 }
 
 /* ------------------------------------------------------------------------- */
@@ -494,7 +480,11 @@ static BenchResult runOneBenchmark(int ndigits, MPI_Comm comm) {
 /* Main                                                                       */
 /* ------------------------------------------------------------------------- */
 int main(int argc, char **argv) {
-    MPI_Init(&argc, &argv);
+    int provided = 0;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    if (provided < MPI_THREAD_FUNNELED) {
+        fprintf(stderr, "Warning: MPI does not provide MPI_THREAD_FUNNELED (got %d)\n", provided);
+    }
 
     int rank, world;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
