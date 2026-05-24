@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1500 970"
+     font-family="'Segoe UI', 'Calibri', Arial, sans-serif">
+
+  <defs>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1F4E79"/>
+    </marker>
+    <marker id="arr-send" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#C0392B"/>
+    </marker>
+    <marker id="arr-gray" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B6B6B"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
+
+  <!-- ====== Title ====== -->
+  <text x="750" y="38" text-anchor="middle"
+        font-size="22" font-weight="700" fill="#1F4E79">
+    Hybrid MPI + OpenMP — Data-Flow Architecture
+  </text>
+  <text x="750" y="60" text-anchor="middle"
+        font-size="12" fill="#5A7B9E" font-style="italic">
+    Targeted point-to-point distribution (no broadcast) · 3 MPI ranks × 4 OpenMP threads per rank
+  </text>
+
+  <!-- ====== Phase labels on the left ====== -->
+  <g font-size="11" font-weight="700" fill="#5A7B9E" font-style="italic">
+    <text x="20" y="135">PHASE 1</text>
+    <text x="20" y="150">SETUP</text>
+
+    <text x="20" y="385">PHASE 2</text>
+    <text x="20" y="400">PARALLEL</text>
+    <text x="20" y="415">COMPUTE</text>
+
+    <text x="20" y="730">PHASE 3</text>
+    <text x="20" y="745">COMBINE</text>
+  </g>
+
+  <!-- ====== PHASE 1: SETUP (top box, Rank 0) ====== -->
+  <g filter="url(#shadow)">
+    <rect x="380" y="90" width="740" height="100" rx="12" ry="12"
+          fill="#1F4E79" stroke="#102A43" stroke-width="2"/>
+  </g>
+  <text x="750" y="118" text-anchor="middle" fill="#FFFFFF"
+        font-size="15" font-weight="700">Rank 0 — Setup</text>
+  <text x="750" y="140" text-anchor="middle" fill="#E6F0FA"
+        font-size="12">MPI_Init_thread( MPI_THREAD_FUNNELED )</text>
+  <text x="750" y="158" text-anchor="middle" fill="#E6F0FA"
+        font-size="12">Pad &amp; split operands locally: A → (a₁, a₀)   B → (b₁, b₀)</text>
+  <text x="750" y="176" text-anchor="middle" fill="#E6F0FA"
+        font-size="12">Compute sums: s₁ = a₁ + a₀ ,  s₂ = b₁ + b₀</text>
+
+  <!-- ====== Distribution arrows (RED point-to-point) ====== -->
+  <!-- Path from setup box to Rank 0 column (keeps locally, blue arrow) -->
+  <path d="M 460 190 L 250 270"
+        stroke="#1F4E79" stroke-width="2.2" fill="none" marker-end="url(#arr-blue)"/>
+  <!-- Path from setup to Rank 1 column (MPI_Send, red) -->
+  <path d="M 750 190 L 750 270"
+        stroke="#C0392B" stroke-width="2.2" fill="none" marker-end="url(#arr-send)"/>
+  <!-- Path from setup to Rank 2 column (MPI_Send, red) -->
+  <path d="M 1040 190 L 1250 270"
+        stroke="#C0392B" stroke-width="2.2" fill="none" marker-end="url(#arr-send)"/>
+
+  <!-- Distribution labels in pill boxes -->
+  <g font-size="11.5" font-weight="700">
+    <rect x="240" y="216" width="170" height="22" rx="4"
+          fill="#EAF1FA" stroke="#1F4E79" stroke-width="1"/>
+    <text x="325" y="232" text-anchor="middle" fill="#1F4E79">(local) keep a₁, b₁</text>
+
+    <rect x="650" y="216" width="200" height="22" rx="4"
+          fill="#FCEEEB" stroke="#C0392B" stroke-width="1"/>
+    <text x="750" y="232" text-anchor="middle" fill="#C0392B">MPI_Send(a₀, b₀) → Rank 1</text>
+
+    <rect x="1080" y="216" width="200" height="22" rx="4"
+          fill="#FCEEEB" stroke="#C0392B" stroke-width="1"/>
+    <text x="1180" y="232" text-anchor="middle" fill="#C0392B">MPI_Send(s₁, s₂) → Rank 2</text>
+  </g>
+
+  <!-- =========================================== -->
+  <!-- ====== PHASE 2: Three Rank columns ====== -->
+  <!-- =========================================== -->
+  <!-- Each rank box: x=col-220, y=270, w=440, h=230 -->
+
+  <!-- ===== Rank 0 column ===== -->
+  <g filter="url(#shadow)">
+    <rect x="30" y="270" width="440" height="230" rx="12" ry="12"
+          fill="#2E75B6" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="250" y="298" text-anchor="middle" fill="#FFFFFF"
+        font-size="15" font-weight="700">Rank 0  ·  4 OpenMP threads</text>
+  <text x="250" y="320" text-anchor="middle" fill="#E6F0FA"
+        font-size="12" font-style="italic">operands: a₁, b₁ (kept locally)</text>
+  <line x1="60" y1="332" x2="440" y2="332" stroke="#5B9BD5" stroke-width="1"/>
+  <text x="250" y="354" text-anchor="middle" fill="#FFFFFF"
+        font-size="14" font-weight="700">z₂ = karatsubaOMP(a₁, b₁)</text>
+
+  <!-- 4 thread mini-boxes -->
+  <g>
+    <rect x="50"  y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="95"  y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T0</text>
+    <text x="95"  y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp single</text>
+    <text x="95"  y="436" text-anchor="middle" font-size="10" fill="#1F4E79">spawns tasks</text>
+
+    <rect x="155" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="200" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T1</text>
+    <text x="200" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp task</text>
+
+    <rect x="260" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="305" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T2</text>
+    <text x="305" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp task</text>
+
+    <rect x="365" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="410" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T3</text>
+    <text x="410" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp task</text>
+  </g>
+  <text x="250" y="478" text-anchor="middle" fill="#E6F0FA"
+        font-size="11" font-style="italic">recursive Karatsuba via #pragma omp task / taskwait</text>
+
+  <!-- ===== Rank 1 column ===== -->
+  <g filter="url(#shadow)">
+    <rect x="530" y="270" width="440" height="230" rx="12" ry="12"
+          fill="#2E75B6" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="750" y="298" text-anchor="middle" fill="#FFFFFF"
+        font-size="15" font-weight="700">Rank 1  ·  4 OpenMP threads</text>
+  <text x="750" y="320" text-anchor="middle" fill="#E6F0FA"
+        font-size="12" font-style="italic">operands: a₀, b₀ (received via MPI_Recv)</text>
+  <line x1="560" y1="332" x2="940" y2="332" stroke="#5B9BD5" stroke-width="1"/>
+  <text x="750" y="354" text-anchor="middle" fill="#FFFFFF"
+        font-size="14" font-weight="700">z₀ = karatsubaOMP(a₀, b₀)</text>
+
+  <g>
+    <rect x="550" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="595" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T0</text>
+    <text x="595" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp single</text>
+    <text x="595" y="436" text-anchor="middle" font-size="10" fill="#1F4E79">spawns tasks</text>
+
+    <rect x="655" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="700" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T1</text>
+    <text x="700" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp task</text>
+
+    <rect x="760" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="805" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T2</text>
+    <text x="805" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp task</text>
+
+    <rect x="865" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="910" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T3</text>
+    <text x="910" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp task</text>
+  </g>
+  <text x="750" y="478" text-anchor="middle" fill="#E6F0FA"
+        font-size="11" font-style="italic">recursive Karatsuba via #pragma omp task / taskwait</text>
+
+  <!-- ===== Rank 2 column ===== -->
+  <g filter="url(#shadow)">
+    <rect x="1030" y="270" width="440" height="230" rx="12" ry="12"
+          fill="#2E75B6" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="1250" y="298" text-anchor="middle" fill="#FFFFFF"
+        font-size="15" font-weight="700">Rank 2  ·  4 OpenMP threads</text>
+  <text x="1250" y="320" text-anchor="middle" fill="#E6F0FA"
+        font-size="12" font-style="italic">operands: s₁, s₂ (received via MPI_Recv)</text>
+  <line x1="1060" y1="332" x2="1440" y2="332" stroke="#5B9BD5" stroke-width="1"/>
+  <text x="1250" y="354" text-anchor="middle" fill="#FFFFFF"
+        font-size="14" font-weight="700">prod = karatsubaOMP(s₁, s₂)</text>
+
+  <g>
+    <rect x="1050" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="1095" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T0</text>
+    <text x="1095" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp single</text>
+    <text x="1095" y="436" text-anchor="middle" font-size="10" fill="#1F4E79">spawns tasks</text>
+
+    <rect x="1155" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="1200" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T1</text>
+    <text x="1200" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp task</text>
+
+    <rect x="1260" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="1305" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T2</text>
+    <text x="1305" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp task</text>
+
+    <rect x="1365" y="380" width="90" height="60" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="1410" y="402" text-anchor="middle" font-size="13" font-weight="700" fill="#1F4E79">T3</text>
+    <text x="1410" y="424" text-anchor="middle" font-size="10" fill="#1F4E79">omp task</text>
+  </g>
+  <text x="1250" y="478" text-anchor="middle" fill="#E6F0FA"
+        font-size="11" font-style="italic">recursive Karatsuba via #pragma omp task / taskwait</text>
+
+  <!-- ====== Sub-result labels under each rank column ====== -->
+  <g font-size="13" font-weight="700">
+    <rect x="180" y="525" width="140" height="28" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="250" y="544" text-anchor="middle" fill="#1F4E79">z₂  (local)</text>
+
+    <rect x="680" y="525" width="140" height="28" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="750" y="544" text-anchor="middle" fill="#1F4E79">z₀  (Rank 1)</text>
+
+    <rect x="1180" y="525" width="140" height="28" rx="6" fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+    <text x="1250" y="544" text-anchor="middle" fill="#1F4E79">prod  (Rank 2)</text>
+  </g>
+
+  <!-- arrows from rank box bottom to result chip -->
+  <g stroke="#1F4E79" stroke-width="1.5" fill="none">
+    <line x1="250"  y1="500" x2="250"  y2="525" marker-end="url(#arr-blue)"/>
+    <line x1="750"  y1="500" x2="750"  y2="525" marker-end="url(#arr-blue)"/>
+    <line x1="1250" y1="500" x2="1250" y2="525" marker-end="url(#arr-blue)"/>
+  </g>
+
+  <!-- ====== Result return arrows (dashed gray, MPI_Send/Recv) ====== -->
+  <g stroke="#6B6B6B" stroke-width="2" stroke-dasharray="6 4" fill="none">
+    <!-- z2 stays local -->
+    <path d="M 250 555 C 250 620, 500 660, 600 685" marker-end="url(#arr-gray)"/>
+    <!-- z0 from Rank 1 -->
+    <path d="M 750 555 L 750 685" marker-end="url(#arr-gray)"/>
+    <!-- prod from Rank 2 -->
+    <path d="M 1250 555 C 1250 620, 1000 660, 900 685" marker-end="url(#arr-gray)"/>
+  </g>
+
+  <!-- Labels: kept local vs MPI_Send -->
+  <g font-size="11" font-weight="600">
+    <rect x="305" y="600" width="160" height="22" rx="4"
+          fill="#FFFFFF" stroke="#C8D2E3" stroke-width="0.8"/>
+    <text x="385" y="615" text-anchor="middle" fill="#1F4E79">stays on Rank 0</text>
+
+    <rect x="660" y="600" width="180" height="22" rx="4"
+          fill="#FCEEEB" stroke="#C0392B" stroke-width="0.8"/>
+    <text x="750" y="615" text-anchor="middle" fill="#C0392B">MPI_Send z₀ → Rank 0</text>
+
+    <rect x="1020" y="600" width="200" height="22" rx="4"
+          fill="#FCEEEB" stroke="#C0392B" stroke-width="0.8"/>
+    <text x="1120" y="615" text-anchor="middle" fill="#C0392B">MPI_Send prod → Rank 0</text>
+  </g>
+
+  <!-- ====== PHASE 3: Bottom combine box (Rank 0) ====== -->
+  <g filter="url(#shadow)">
+    <rect x="380" y="685" width="740" height="105" rx="12" ry="12"
+          fill="#1F4E79" stroke="#102A43" stroke-width="2"/>
+  </g>
+  <text x="750" y="712" text-anchor="middle" fill="#FFFFFF"
+        font-size="15" font-weight="700">Rank 0 — Combine</text>
+  <text x="750" y="735" text-anchor="middle" fill="#E6F0FA"
+        font-size="12">z₁ = prod − z₂ − z₀</text>
+  <text x="750" y="755" text-anchor="middle" fill="#E6F0FA"
+        font-size="13" font-weight="600">final = z₂ · 10ᴺ + z₁ · 10^(N/2) + z₀</text>
+  <text x="750" y="775" text-anchor="middle" fill="#B8D4F0"
+        font-size="11" font-style="italic">carry-propagate · return result</text>
+
+  <!-- ====== LEGEND ====== -->
+  <g transform="translate(120, 815)">
+    <rect width="1260" height="135" fill="#FAFBFD" stroke="#C8D2E3" stroke-width="1" rx="8"/>
+    <text x="20" y="26" font-size="14" font-weight="700" fill="#1F4E79">Legend</text>
+
+    <!-- Row 1 -->
+    <g transform="translate(20, 42)">
+      <rect x="0" y="0" width="36" height="20" rx="3"
+            fill="#1F4E79" stroke="#102A43" stroke-width="1.5"/>
+      <text x="47" y="15" font-size="12" fill="#1F4E79">
+        <tspan font-weight="700">Rank 0 (root)</tspan>
+        <tspan>  — setup + combine phases run only on the root process</tspan>
+      </text>
+    </g>
+    <g transform="translate(640, 42)">
+      <rect x="0" y="0" width="36" height="20" rx="3"
+            fill="#2E75B6" stroke="#1F4E79" stroke-width="1.5"/>
+      <text x="47" y="15" font-size="12" fill="#1F4E79">
+        <tspan font-weight="700">MPI rank with OpenMP team</tspan>
+        <tspan>  — 4 threads run recursive Karatsuba</tspan>
+      </text>
+    </g>
+
+    <!-- Row 2 -->
+    <g transform="translate(20, 72)">
+      <line x1="0" y1="0" x2="36" y2="0"
+            stroke="#C0392B" stroke-width="2.2" marker-end="url(#arr-send)"/>
+      <text x="47" y="4" font-size="12" fill="#1F4E79">
+        <tspan font-weight="700">MPI_Send</tspan>
+        <tspan font-weight="600" fill="#C0392B">  (point-to-point, half-size operands)</tspan>
+        <tspan>  — no broadcast; ~4× less wire traffic than the original design</tspan>
+      </text>
+    </g>
+    <g transform="translate(20, 100)">
+      <line x1="0" y1="0" x2="36" y2="0"
+            stroke="#6B6B6B" stroke-width="2" stroke-dasharray="6 4"
+            marker-end="url(#arr-gray)"/>
+      <text x="47" y="4" font-size="12" fill="#1F4E79">
+        <tspan font-weight="700">Result return</tspan>
+        <tspan>  — partial product flows back to Rank 0 for final assembly via MPI_Send / MPI_Recv</tspan>
+      </text>
+    </g>
+  </g>
+
+</svg>

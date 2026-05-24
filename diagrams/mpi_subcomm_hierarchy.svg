@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1500 880"
+     font-family="'Segoe UI', 'Calibri', Arial, sans-serif">
+
+  <defs>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1F4E79"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2E7D32"/>
+    </marker>
+    <marker id="arr-orange" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#E65100"/>
+    </marker>
+    <marker id="arr-gray" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B6B6B"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
+
+  <!-- ====== Title ====== -->
+  <text x="750" y="38" text-anchor="middle"
+        font-size="22" font-weight="700" fill="#1F4E79">
+    MPI Sub-Communicator Hierarchy
+  </text>
+  <text x="750" y="60" text-anchor="middle"
+        font-size="12" fill="#5A7B9E" font-style="italic">
+    Distributed Karatsuba via MPI_Comm_split — recursive sub-communicator splitting
+  </text>
+
+  <!-- ====== Global Communicator (top) ====== -->
+  <g filter="url(#shadow)">
+    <rect x="600" y="90" width="300" height="60" rx="10" ry="10"
+          fill="#2E75B6" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="750" y="115" text-anchor="middle" fill="#FFFFFF"
+        font-size="14" font-weight="700">Global Communicator (P ranks)</text>
+  <text x="750" y="135" text-anchor="middle" fill="#E6F0FA"
+        font-size="12">Rank 0 leader</text>
+
+  <!-- ====== MPI_Comm_split label + central arrow ====== -->
+  <line x1="750" y1="150" x2="750" y2="195"
+        stroke="#1F4E79" stroke-width="2" marker-end="url(#arr-blue)" fill="none"/>
+  <rect x="660" y="160" width="180" height="22" rx="4" fill="#EAF1FA" stroke="#1F4E79" stroke-width="1"/>
+  <text x="750" y="176" text-anchor="middle"
+        font-size="12" font-weight="600" fill="#1F4E79">MPI_Comm_split(color, key)</text>
+
+  <!-- Fan-out arrows to 3 sub-groups -->
+  <g stroke="#1F4E79" stroke-width="1.6" fill="none">
+    <line x1="750" y1="195" x2="250"  y2="215" marker-end="url(#arr-blue)"/>
+    <line x1="750" y1="195" x2="750"  y2="215" marker-end="url(#arr-blue)"/>
+    <line x1="750" y1="195" x2="1250" y2="215" marker-end="url(#arr-blue)"/>
+  </g>
+
+  <!-- ====== Sub-group boxes (3 columns) ====== -->
+  <!-- Col 0: z2 -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="215" width="380" height="80" rx="10" ry="10"
+          fill="#2E75B6" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="250" y="245" text-anchor="middle" fill="#FFFFFF"
+        font-size="14" font-weight="700">Color 0 (s₀ ranks)</text>
+  <text x="250" y="272" text-anchor="middle" fill="#E6F0FA"
+        font-size="12">→ computes z₂ = A₁ × B₁</text>
+
+  <!-- Col 1: z0 -->
+  <g filter="url(#shadow)">
+    <rect x="560" y="215" width="380" height="80" rx="10" ry="10"
+          fill="#2E75B6" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="750" y="245" text-anchor="middle" fill="#FFFFFF"
+        font-size="14" font-weight="700">Color 1 (s₁ ranks)</text>
+  <text x="750" y="272" text-anchor="middle" fill="#E6F0FA"
+        font-size="12">→ computes z₀ = A₀ × B₀</text>
+
+  <!-- Col 2: prod -->
+  <g filter="url(#shadow)">
+    <rect x="1060" y="215" width="380" height="80" rx="10" ry="10"
+          fill="#2E75B6" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="1250" y="245" text-anchor="middle" fill="#FFFFFF"
+        font-size="14" font-weight="700">Color 2 (s₂ ranks)</text>
+  <text x="1250" y="272" text-anchor="middle" fill="#E6F0FA"
+        font-size="12">→ computes prod = (A₁+A₀)(B₁+B₀)</text>
+
+  <!-- Down arrows from each sub-group to its decision diamond -->
+  <g stroke="#1F4E79" stroke-width="1.6" fill="none">
+    <line x1="250"  y1="295" x2="250"  y2="320" marker-end="url(#arr-blue)"/>
+    <line x1="750"  y1="295" x2="750"  y2="320" marker-end="url(#arr-blue)"/>
+    <line x1="1250" y1="295" x2="1250" y2="320" marker-end="url(#arr-blue)"/>
+  </g>
+
+  <!-- ====== Decision diamonds (3) ====== -->
+  <!-- Col 0 -->
+  <g filter="url(#shadow)">
+    <polygon points="250,322 370,367 250,412 130,367"
+             fill="#FFFFFF" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="250" y="361" text-anchor="middle"
+        font-size="12" font-weight="700" fill="#1F4E79">size ≥ 3 AND</text>
+  <text x="250" y="380" text-anchor="middle"
+        font-size="12" font-weight="700" fill="#1F4E79">N &gt; 500 ?</text>
+
+  <!-- Col 1 -->
+  <g filter="url(#shadow)">
+    <polygon points="750,322 870,367 750,412 630,367"
+             fill="#FFFFFF" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="750" y="361" text-anchor="middle"
+        font-size="12" font-weight="700" fill="#1F4E79">size ≥ 3 AND</text>
+  <text x="750" y="380" text-anchor="middle"
+        font-size="12" font-weight="700" fill="#1F4E79">N &gt; 500 ?</text>
+
+  <!-- Col 2 -->
+  <g filter="url(#shadow)">
+    <polygon points="1250,322 1370,367 1250,412 1130,367"
+             fill="#FFFFFF" stroke="#1F4E79" stroke-width="2"/>
+  </g>
+  <text x="1250" y="361" text-anchor="middle"
+        font-size="12" font-weight="700" fill="#1F4E79">size ≥ 3 AND</text>
+  <text x="1250" y="380" text-anchor="middle"
+        font-size="12" font-weight="700" fill="#1F4E79">N &gt; 500 ?</text>
+
+  <!-- ====== Branch arrows: Yes (green/Recurse) / No (orange/Serial) ====== -->
+  <!-- Col 0 -->
+  <line x1="195" y1="395" x2="160" y2="465"
+        stroke="#2E7D32" stroke-width="1.8" marker-end="url(#arr-green)" fill="none"/>
+  <text x="145" y="438" font-size="11" font-weight="700" fill="#2E7D32">Yes</text>
+  <line x1="305" y1="395" x2="345" y2="465"
+        stroke="#E65100" stroke-width="1.8" marker-end="url(#arr-orange)" fill="none"/>
+  <text x="358" y="438" font-size="11" font-weight="700" fill="#E65100">No</text>
+
+  <!-- Col 1 -->
+  <line x1="695" y1="395" x2="660" y2="465"
+        stroke="#2E7D32" stroke-width="1.8" marker-end="url(#arr-green)" fill="none"/>
+  <text x="645" y="438" font-size="11" font-weight="700" fill="#2E7D32">Yes</text>
+  <line x1="805" y1="395" x2="845" y2="465"
+        stroke="#E65100" stroke-width="1.8" marker-end="url(#arr-orange)" fill="none"/>
+  <text x="858" y="438" font-size="11" font-weight="700" fill="#E65100">No</text>
+
+  <!-- Col 2 -->
+  <line x1="1195" y1="395" x2="1160" y2="465"
+        stroke="#2E7D32" stroke-width="1.8" marker-end="url(#arr-green)" fill="none"/>
+  <text x="1145" y="438" font-size="11" font-weight="700" fill="#2E7D32">Yes</text>
+  <line x1="1305" y1="395" x2="1345" y2="465"
+        stroke="#E65100" stroke-width="1.8" marker-end="url(#arr-orange)" fill="none"/>
+  <text x="1358" y="438" font-size="11" font-weight="700" fill="#E65100">No</text>
+
+  <!-- ====== Outcome boxes ====== -->
+  <!-- Recurse boxes (green) -->
+  <g filter="url(#shadow)">
+    <rect x="75"   y="465" width="170" height="58" rx="8" fill="#4CAF50" stroke="#2E7D32" stroke-width="2"/>
+    <rect x="575"  y="465" width="170" height="58" rx="8" fill="#4CAF50" stroke="#2E7D32" stroke-width="2"/>
+    <rect x="1075" y="465" width="170" height="58" rx="8" fill="#4CAF50" stroke="#2E7D32" stroke-width="2"/>
+  </g>
+  <g text-anchor="middle" fill="#FFFFFF">
+    <text x="160"  y="490" font-size="13" font-weight="700">Recurse</text>
+    <text x="160"  y="510" font-size="11" fill="#E6F4E6">(split sub-comm again)</text>
+    <text x="660"  y="490" font-size="13" font-weight="700">Recurse</text>
+    <text x="660"  y="510" font-size="11" fill="#E6F4E6">(split sub-comm again)</text>
+    <text x="1160" y="490" font-size="13" font-weight="700">Recurse</text>
+    <text x="1160" y="510" font-size="11" fill="#E6F4E6">(split sub-comm again)</text>
+  </g>
+
+  <!-- Serial Karatsuba boxes (orange) -->
+  <g filter="url(#shadow)">
+    <rect x="265"  y="465" width="170" height="58" rx="8" fill="#FF9800" stroke="#E65100" stroke-width="2"/>
+    <rect x="765"  y="465" width="170" height="58" rx="8" fill="#FF9800" stroke="#E65100" stroke-width="2"/>
+    <rect x="1265" y="465" width="170" height="58" rx="8" fill="#FF9800" stroke="#E65100" stroke-width="2"/>
+  </g>
+  <g text-anchor="middle" fill="#FFFFFF">
+    <text x="350"  y="490" font-size="13" font-weight="700">Serial Karatsuba</text>
+    <text x="350"  y="510" font-size="11" fill="#FFF1E0">(local computation)</text>
+    <text x="850"  y="490" font-size="13" font-weight="700">Serial Karatsuba</text>
+    <text x="850"  y="510" font-size="11" fill="#FFF1E0">(local computation)</text>
+    <text x="1350" y="490" font-size="13" font-weight="700">Serial Karatsuba</text>
+    <text x="1350" y="510" font-size="11" fill="#FFF1E0">(local computation)</text>
+  </g>
+
+  <!-- ====== Result return paths (dashed gray, MPI_Send / MPI_Recv) ====== -->
+  <g stroke="#6B6B6B" stroke-width="2" stroke-dasharray="6 4" fill="none">
+    <!-- Col 0 result curves down-right to combine box -->
+    <path d="M 250 525 C 250 600, 500 615, 600 640" marker-end="url(#arr-gray)"/>
+    <!-- Col 1 result straight down -->
+    <path d="M 750 525 L 750 635" marker-end="url(#arr-gray)"/>
+    <!-- Col 2 result curves down-left to combine box -->
+    <path d="M 1250 525 C 1250 600, 1000 615, 900 640" marker-end="url(#arr-gray)"/>
+  </g>
+
+  <!-- MPI_Send / MPI_Recv labels -->
+  <g font-size="11" font-weight="600" fill="#1F4E79">
+    <rect x="320" y="568" width="160" height="20" rx="3" fill="#FFFFFF" stroke="#C8D2E3" stroke-width="0.5"/>
+    <text x="400" y="582" text-anchor="middle">MPI_Send → root</text>
+
+    <rect x="670" y="568" width="160" height="20" rx="3" fill="#FFFFFF" stroke="#C8D2E3" stroke-width="0.5"/>
+    <text x="750" y="582" text-anchor="middle">MPI_Recv on Rank 0</text>
+
+    <rect x="1020" y="568" width="160" height="20" rx="3" fill="#FFFFFF" stroke="#C8D2E3" stroke-width="0.5"/>
+    <text x="1100" y="582" text-anchor="middle">MPI_Send → root</text>
+  </g>
+
+  <!-- ====== Final combine box (Rank 0) ====== -->
+  <g filter="url(#shadow)">
+    <rect x="500" y="640" width="500" height="65" rx="10" ry="10"
+          fill="#1F4E79" stroke="#102A43" stroke-width="2"/>
+  </g>
+  <text x="750" y="667" text-anchor="middle" fill="#FFFFFF"
+        font-size="14" font-weight="700">Rank 0: Combine partial products</text>
+  <text x="750" y="688" text-anchor="middle" fill="#E6F0FA"
+        font-size="12">final = z₂ · 10ᴺ + z₁ · 10^(N/2) + z₀ &#160;&#160;(carry-propagate)</text>
+
+  <!-- ====== Legend ====== -->
+  <g transform="translate(120, 735)">
+    <rect width="1260" height="120" fill="#FAFBFD" stroke="#C8D2E3" stroke-width="1" rx="8"/>
+    <text x="20" y="26" font-size="14" font-weight="700" fill="#1F4E79">Legend</text>
+
+    <!-- Row 1 -->
+    <g transform="translate(20, 42)">
+      <rect x="0" y="0" width="34" height="20" rx="3"
+            fill="#2E75B6" stroke="#1F4E79" stroke-width="1.5"/>
+      <text x="45" y="15" font-size="12" fill="#1F4E79">
+        <tspan font-weight="700">MPI communicator</tspan>
+        <tspan>  — process group (split via MPI_Comm_split)</tspan>
+      </text>
+    </g>
+    <g transform="translate(620, 42)">
+      <polygon points="0,10 17,0 34,10 17,20"
+               fill="#FFFFFF" stroke="#1F4E79" stroke-width="1.5"/>
+      <text x="45" y="15" font-size="12" fill="#1F4E79">
+        <tspan font-weight="700">Decision</tspan>
+        <tspan>  — branch based on sub-group size &amp; problem size</tspan>
+      </text>
+    </g>
+
+    <!-- Row 2 -->
+    <g transform="translate(20, 72)">
+      <rect x="0" y="0" width="34" height="20" rx="3"
+            fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+      <text x="45" y="15" font-size="12" fill="#1F4E79">
+        <tspan font-weight="700">Recursive path</tspan>
+        <tspan>  — apply MPI_Comm_split again on the sub-group</tspan>
+      </text>
+    </g>
+    <g transform="translate(620, 72)">
+      <rect x="0" y="0" width="34" height="20" rx="3"
+            fill="#FF9800" stroke="#E65100" stroke-width="1.5"/>
+      <text x="45" y="15" font-size="12" fill="#1F4E79">
+        <tspan font-weight="700">Serial fallback</tspan>
+        <tspan>  — Karatsuba runs locally on the group leader</tspan>
+      </text>
+    </g>
+
+    <!-- Row 3 -->
+    <g transform="translate(20, 102)">
+      <line x1="0" y1="0" x2="34" y2="0"
+            stroke="#6B6B6B" stroke-width="2" stroke-dasharray="6 4"
+            marker-end="url(#arr-gray)" fill="none"/>
+      <text x="45" y="4" font-size="12" fill="#1F4E79">
+        <tspan font-weight="700">Data flow</tspan>
+        <tspan>  — partial product returned to Rank 0 via MPI_Send / MPI_Recv for final assembly</tspan>
+      </text>
+    </g>
+  </g>
+
+</svg>
