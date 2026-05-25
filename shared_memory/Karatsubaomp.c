@@ -246,7 +246,6 @@ static void karatsubaParallelInner(const BigInt *a, const BigInt *b, BigInt *res
     karatsubaParallelInner(&a1a0, &b1b0, &z1prod, depth + 1);
     freeBigInt(&a1a0); freeBigInt(&b1b0);
 
-    /* Wait for both tasks before combining */
     #pragma omp taskwait
 
     freeBigInt(&a0);   freeBigInt(&a1);

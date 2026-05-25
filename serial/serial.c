@@ -4,20 +4,24 @@
 #include <string.h>
 #include <time.h>
 
-/* ---------------------------------------------------------------------------
- * BigInt: digits stored LITTLE-ENDIAN (digits[0] = least significant digit)
- * --------------------------------------------------------------------------- */
 typedef struct {
     int *digits;
     int  size;
 } BigInt;
 
+static unsigned int nextRand(unsigned int *seed) {
+    *seed = *seed * 1103515245u + 12345u;
+    return (*seed / 65536u) % 32768u;
+}
+
+// Free the memory used by a BigInt and reset it to an empty state.
 static void freeBigInt(BigInt *b) {
     free(b->digits);
     b->digits = NULL;
     b->size   = 0;
-}
+} 
 
+// Return the number of significant digits in a BigInt (ignoring leading zeros).
 static int effectiveSize(const BigInt *b) {
     int s = b->size;
     while (s > 0 && b->digits[s - 1] == 0) s--;
@@ -43,9 +47,9 @@ void randomBigInt(BigInt *b, int ndigits, unsigned int *seed) {
         fprintf(stderr, "Fatal: malloc failed in randomBigInt\n");
         exit(1);
     }
-    str[0] = '1' + (rand_r(seed) % 9);   /* no leading zero */
+    str[0] = '1' + (nextRand(seed) % 9);   /* no leading zero */
     for (int i = 1; i < ndigits; i++)
-        str[i] = '0' + (rand_r(seed) % 10);
+        str[i] = '0' + (nextRand(seed) % 10);
     str[ndigits] = '\0';
     initializeBigInt(b, str);
     free(str);
@@ -160,13 +164,6 @@ void multiplyBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
     }
 }
 
-/* ---- Karatsuba O(n^1.585) ------------------------------------------------
- *
- * HYBRID: switch to grade-school below KARATSUBA_THRESHOLD digits.
- * This eliminates the recursion overhead that made Karatsuba slow on small
- * inputs, and is exactly what production big-integer libraries do.
- * Tune KARATSUBA_THRESHOLD to find the crossover point on your CPU.
- * --------------------------------------------------------------------------- */
 #define KARATSUBA_THRESHOLD 32
 
 void karatsubaMultiply(const BigInt *a, const BigInt *b, BigInt *result) {

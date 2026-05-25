@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include <time.h>
+
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 
 // BigInt structure: represents a large integer as an array of digits (least significant digit first)
 typedef struct {
@@ -10,41 +13,44 @@ typedef struct {
     int  size;
 } BigInt;
 
+static unsigned int nextRand(unsigned int *seed) {
+    *seed = *seed * 1103515245u + 12345u;
+    return (*seed / 65536u) % 32768u;
+}
+
 static void freeBigInt(BigInt *b) {
     free(b->digits);
     b->digits = NULL;
     b->size   = 0;
 }
 
-// Return the number of digits up to and including the most significant non-zero digit.
+
 static int effectiveSize(const BigInt *b) {
     int s = b->size;
     while (s > 0 && b->digits[s - 1] == 0) s--;
     return s == 0 ? 1 : s;
 }
 
-// Build a BigInt from a decimal string
 void initializeBigInt(BigInt *b, const char *str) {
     b->size   = (int)strlen(str);
-    b->digits = (int *)malloc(b->size * sizeof(int));
+    b->digits = (int *)malloc(b->size * sizeof(int)); // digits stored little-endian (least significant digit first)
     if (!b->digits) {
         fprintf(stderr, "Fatal: malloc failed in initializeBigInt\n");
         exit(1);
     }
     for (int i = 0; i < b->size; i++)
-        b->digits[i] = str[b->size - 1 - i] - '0';
+        b->digits[i] = str[b->size - 1 - i] - '0'; // convert char to int
 }
 
-// Build a BigInt from a random n-digit decimal number
 void randomBigInt(BigInt *b, int ndigits, unsigned int *seed) {
     char *str = (char *)malloc(ndigits + 1);
     if (!str) {
         fprintf(stderr, "Fatal: malloc failed in randomBigInt\n");
         exit(1);
     }
-    str[0] = '1' + (rand_r(seed) % 9);
+    str[0] = '1' + (nextRand(seed) % 9); // no leading zero
     for (int i = 1; i < ndigits; i++)
-        str[i] = '0' + (rand_r(seed) % 10);
+        str[i] = '0' + (nextRand(seed) % 10);
     str[ndigits] = '\0';
     initializeBigInt(b, str);
     free(str);
@@ -69,6 +75,7 @@ static void addBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
 }
 
 static void subtractBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
+    // Subtraction a - b where a >= b (caller must ensure non-negative)
     result->digits = (int *)calloc(a->size, sizeof(int));
     if (!result->digits) {
         fprintf(stderr, "Fatal: calloc failed in subtractBigInts\n");
@@ -84,6 +91,8 @@ static void subtractBigInts(const BigInt *a, const BigInt *b, BigInt *result) {
 }
 
 static void shiftLeft(BigInt *b, int shift) {
+    // Multiply by base^shift (base = 10), implemented by prefixing
+    // `shift` zeros to the digit array (increases significance).
     if (shift == 0) return;
     int newSize    = b->size + shift;
     int *newDigits = (int *)calloc(newSize, sizeof(int));
@@ -195,8 +204,10 @@ void karatsubaSerial(const BigInt *a, const BigInt *b, BigInt *result) {
 
 /* PARALLEL Karatsuba with POSIX Threads (Pthreads) */
 
-#define PTHREAD_TASK_THRESHOLD 500
+#define PTHREAD_TASK_THRESHOLD 500 // below this, run serially --- no more thread overhead
 #define PTHREAD_MAX_DEPTH 4
+
+#ifndef _WIN32
 
 typedef struct {
     const BigInt *a;
@@ -204,9 +215,12 @@ typedef struct {
     BigInt *result;
     int depth;
 } PthreadArgs;
+//pthread_create() accepts only one argument
+
 
 static void karatsubaPthreadInner(const BigInt *a, const BigInt *b, BigInt *result, int depth);
 
+// Thread helper: unwraps arguments and calls the recursive worker.
 void *pthreadKaratsubaHelper(void *arg) {
     PthreadArgs *args = (PthreadArgs *)arg;
     karatsubaPthreadInner(args->a, args->b, args->result, args->depth);
@@ -218,6 +232,7 @@ static void karatsubaPthreadInner(const BigInt *a, const BigInt *b, BigInt *resu
     int nb = effectiveSize(b);
     int n  = na > nb ? na : nb;
 
+    // Decide whether to spawn threads for this recursion level.
     int spawn = (n >= PTHREAD_TASK_THRESHOLD && depth < PTHREAD_MAX_DEPTH);
 
     if (!spawn) {
@@ -255,22 +270,21 @@ static void karatsubaPthreadInner(const BigInt *a, const BigInt *b, BigInt *resu
     int err2 = pthread_create(&t2, NULL, pthreadKaratsubaHelper, &args2);
     int err0 = pthread_create(&t0, NULL, pthreadKaratsubaHelper, &args0);
 
-    // Compute z1prod in the current thread while the other two run in parallel threads
+    // Compute z1prod in the current thread while the other two run
+    // in parallel threads.
     karatsubaPthreadInner(&a1a0, &b1b0, &z1prod, depth + 1);
     freeBigInt(&a1a0); freeBigInt(&b1b0);
 
-    // Wait for the threads to finish
+    // Wait for the threads to finish (if they were started)
     if (err2 == 0) {
         pthread_join(t2, NULL);
     } else {
-        // Fallback: if creation failed, compute in this thread
         karatsubaPthreadInner(&a1, &b1, &z2, depth + 1);
     }
 
     if (err0 == 0) {
         pthread_join(t0, NULL);
     } else {
-        // Fallback
         karatsubaPthreadInner(&a0, &b0, &z0, depth + 1);
     }
 
@@ -293,7 +307,15 @@ static void karatsubaPthreadInner(const BigInt *a, const BigInt *b, BigInt *resu
 void karatsubaParallel(const BigInt *a, const BigInt *b, BigInt *result) {
     karatsubaPthreadInner(a, b, result, 0);
 }
+#else
 
+void karatsubaParallel(const BigInt *a, const BigInt *b, BigInt *result) {
+    karatsubaCore(a, b, result);
+}
+
+#endif
+
+// Compare two BigInts for numeric equality (ignores leading zeros).
 static int bigIntsEqual(const BigInt *a, const BigInt *b) {
     int na = effectiveSize(a), nb = effectiveSize(b);
     if (na != nb) return 0;
@@ -302,23 +324,19 @@ static int bigIntsEqual(const BigInt *a, const BigInt *b) {
     return 1;
 }
 
-static void printBigIntShort(const BigInt *b) {
-    int top = effectiveSize(b) - 1;
-    if (top + 1 <= 20) {
-        for (int i = top; i >= 0; i--) printf("%d", b->digits[i]);
-    } else {
-        for (int i = top; i > top - 10; i--) printf("%d", b->digits[i]);
-        printf("...[%d digits]...", top + 1);
-        for (int i = 9; i >= 0; i--) printf("%d", b->digits[i]);
-    }
-    printf("\n");
+// now_sec: portable wall-clock time in seconds. On Windows use
+// clock(), on POSIX use clock_gettime(CLOCK_MONOTONIC).
+#if defined(_WIN32)
+static double now_sec(void) {
+    return (double)clock() / CLOCKS_PER_SEC;
 }
-
+#else
 static double now_sec(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
 }
+#endif
 
 int main(void) {
     printf("=================================================================\n");
